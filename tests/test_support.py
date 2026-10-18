@@ -105,6 +105,15 @@ def test_help_without_docs_does_not_call_llm(
     assert "В документации этого нет" in response.json()["answer"]
 
 
+def test_default_crm_data_falls_back_to_demo(tmp_path: Path, settings: Settings) -> None:
+    from ai_assistant.config import crm_data_path
+
+    repo = tmp_path / "repo"
+    (repo / "demo").mkdir(parents=True)
+    (repo / "demo" / "tickets.json").write_text('{"tickets": []}', encoding="utf-8")
+    assert crm_data_path(repo, settings) == repo / "demo"
+
+
 def test_help_empty_question_returns_422(
     demo_repo: Path, demo_index: Index, settings: Settings
 ) -> None:

@@ -9,7 +9,7 @@ from typing import Annotated
 import typer
 
 from ai_assistant import APP_NAME, __version__
-from ai_assistant.config import get_settings
+from ai_assistant.config import crm_data_path, get_settings
 from ai_assistant.index import Index
 from ai_assistant.llm import LLMError
 from ai_assistant.mcp_client import MCPClientError
@@ -129,9 +129,11 @@ def support_serve(
     from ai_assistant.task33_support import serve
 
     settings = get_settings()
-    data_path = data or (settings.data_dir / "data")
+    repo_path = repo.resolve()
+    data_path = data or crm_data_path(repo_path, settings)
     typer.echo(f"Support service: http://{host}:{port}/docs")
-    serve(host=host, port=port, repo=repo.resolve(), data=data_path)
+    typer.echo(f"CRM data: {data_path}")
+    serve(host=host, port=port, repo=repo_path, data=data_path)
 
 
 @mcp_app.command("project")
@@ -151,7 +153,7 @@ def mcp_crm(
     """stdio MCP-сервер CRM: get_ticket, get_user, list_user_tickets."""
     from ai_assistant.mcp_crm import run_crm_server
 
-    data_path = data or (get_settings().data_dir / "data")
+    data_path = data or crm_data_path(Path.cwd(), get_settings())
     run_crm_server(data_path.expanduser().resolve())
 
 

@@ -9,7 +9,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 
 from ai_assistant import APP_NAME, __version__
-from ai_assistant.config import Settings, get_settings
+from ai_assistant.config import Settings, crm_data_path, get_settings
 from ai_assistant.index import Index, ensure_index
 from ai_assistant.llm import LLM, get_llm
 from ai_assistant.mcp_client import MCPCRMClient
@@ -56,7 +56,7 @@ def create_app(
     """Фабрика приложения с внедряемыми зависимостями для тестов."""
     config = settings or get_settings()
     repo_path = (repo or Path.cwd()).resolve()
-    data_path = (data or (config.data_dir / "data")).expanduser().resolve()
+    data_path = (data or crm_data_path(repo_path, config)).expanduser().resolve()
     crm_client: CRMClientProtocol = crm or MCPCRMClient(data_path)
     rag_index, _ = (index, None) if index is not None else ensure_index(repo_path, config)
 

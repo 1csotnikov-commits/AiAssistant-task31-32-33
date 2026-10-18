@@ -28,6 +28,19 @@ def repo_slug(repo: Path) -> str:
     return slug or "repo"
 
 
+def crm_data_path(repo: Path | None = None, settings: Settings | None = None) -> Path:
+    """Каталог CRM: сначала AIASSIST_DATA_DIR/data, затем <repo>/demo."""
+    config = settings or get_settings()
+    preferred = config.data_dir / "data"
+    if any((preferred / name).is_file() for name in ("tickets.json", "users.json", "crm.json")):
+        return preferred
+    if repo is not None:
+        demo = repo.resolve() / "demo"
+        if any((demo / name).is_file() for name in ("tickets.json", "users.json", "crm.json")):
+            return demo
+    return preferred
+
+
 class Settings(BaseModel):
     """Настройки, собранные из окружения и `.env`."""
 
