@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -14,6 +15,18 @@ from ai_assistant.llm import LLMError
 from ai_assistant.mcp_client import MCPClientError
 from ai_assistant.task31_cli import ask_and_print, run_chat
 from ai_assistant.task32_review import review, write_review
+
+
+def _configure_stdio() -> None:
+    """Не падать на Unicode при перенаправлении вывода в Windows."""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(errors="replace")
+        except (AttributeError, ValueError):
+            continue
+
+
+_configure_stdio()
 
 app = typer.Typer(add_completion=False, no_args_is_help=True, help="AiAssistant: RAG + MCP ассистент (задания 31-33).")
 support_app = typer.Typer(help="Задача 33: FastAPI-сервис поддержки.")
