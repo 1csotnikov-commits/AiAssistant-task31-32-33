@@ -1,0 +1,32 @@
+# Секреты и локальное окружение
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Кэши инструментов
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Индексы, результаты ревью, логи и пользовательские данные
+*.sqlite
+*.sqlite3
+data/
+review/
+logs/
+indexes/
+
+# Служебные файлы задания
+PROMPT_AiAssistant_tasks31-33.md
+review.md
+
+# IDE / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

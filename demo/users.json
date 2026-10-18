@@ -1,0 +1,16 @@
+{
+  "users": [
+    {
+      "id": "U-001",
+      "name": "Тестовый пользователь",
+      "role": "viewer",
+      "plan": "basic"
+    },
+    {
+      "id": "U-002",
+      "name": "Администратор Пример",
+      "role": "admin",
+      "plan": "enterprise"
+    }
+  ]
+}

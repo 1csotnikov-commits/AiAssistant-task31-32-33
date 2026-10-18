@@ -1,0 +1,28 @@
+diff --git a/ai_assistant/analytics.py b/ai_assistant/analytics.py
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/ai_assistant/analytics.py
+@@ -0,0 +1,22 @@
++"""Аналитика для демонстрации ревью (намеренно с ошибками)."""
++
++from __future__ import annotations
++
++
++def average(values: list[float]) -> float:
++    """Среднее значение без проверки пустого списка."""
++    return sum(values) / len(values)
++
++
++def success_rate(success: int, total: int) -> float:
++    """Доля успешных операций без проверки нуля."""
++    return success / total
++
++
++def first_result(results: list[str]) -> str:
++    """Первый результат без проверки пустого списка."""
++    return results[0]
++
++
++def format_rate(success: int, total: int) -> str:
++    return f"{success_rate(success, total):.0%}"
