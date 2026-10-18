@@ -5,7 +5,9 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from ai_assistant.git_tools import changed_files, git_branch, git_diff, list_files
+import pytest
+
+from ai_assistant.git_tools import GitError, changed_files, git_branch, git_diff, git_show, list_files
 
 
 def _commit(repo: Path, message: str) -> None:
@@ -37,3 +39,9 @@ def test_diff_and_changed_files(git_repo: Path) -> None:
     assert changed_files(git_repo, "HEAD~1", "HEAD") == ["README.md"]
     limited = git_diff(git_repo, "HEAD~1", "HEAD", max_chars=10)
     assert "diff обрезан" in limited
+
+
+def test_git_show_and_path_validation(git_repo: Path) -> None:
+    assert "Git repo" in git_show(git_repo, "HEAD", "README.md")
+    with pytest.raises(GitError):
+        git_show(git_repo, "HEAD", "../secret.txt")

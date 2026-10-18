@@ -21,6 +21,16 @@ def validate_ref(ref: str) -> str:
     return ref
 
 
+def validate_repo_path(path: str) -> str:
+    """Запрещает абсолютные пути, выход из repo и NUL-байты."""
+    candidate = path.replace("\\", "/").strip()
+    if not candidate or candidate.startswith("/") or "\x00" in candidate:
+        raise GitError(f"Недопустимый путь в репозитории: {path!r}")
+    if any(part == ".." for part in candidate.split("/")):
+        raise GitError(f"Путь выходит за пределы репозитория: {path!r}")
+    return candidate
+
+
 def run_git(repo: Path, args: list[str], timeout: float = 30.0) -> str:
     """Запускает `git -C repo ...` с shell=False."""
     command = ["git", "-C", str(repo), *args]
@@ -78,6 +88,14 @@ def git_diff(repo: Path, base: str, head: str = "HEAD", max_chars: int = 100_000
     if len(output) > max_chars:
         return output[:max_chars] + f"\n\n[diff обрезан: показано {max_chars} символов из {len(output)}]"
     return output
+
+
+def git_show(repo: Path, ref: str, path: str, max_chars: int = 200_000) -> str:
+    """Содержимое файла на указанной git-ссылке (только чтение)."""
+    validate_ref(ref)
+    safe_path = validate_repo_path(path)
+    output = run_git(repo, ["show", f"{ref}:{safe_path}"])
+    return output[:max_chars]
 
 
 def changed_files(repo: Path, base: str, head: str = "HEAD") -> list[str]:

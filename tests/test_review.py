@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ai_assistant.config import Settings
 from ai_assistant.index import Index
 from ai_assistant.task32_review import REVIEW_SECTIONS, ensure_sections, review, write_review
 from tests.conftest import REVIEW_RESPONSE
@@ -48,3 +49,41 @@ def test_write_review(tmp_path: Path) -> None:
     result = write_review("# Ревью\n", output)
     assert result == output
     assert output.read_text(encoding="utf-8") == "# Ревью\n"
+
+
+def test_review_reads_changed_code_from_git_branch(tmp_path: Path, settings: Settings) -> None:
+    import subprocess
+
+    repo = tmp_path / "gitreview"
+    repo.mkdir()
+
+    def git(*args: str) -> str:
+        return subprocess.run(
+            ["git", "-C", str(repo), *args],
+            capture_output=True,
+            text=True,
+            check=True,
+            encoding="utf-8",
+        ).stdout
+
+    git("init", "-b", "main")
+    git("config", "user.name", "Test")
+    git("config", "user.email", "test@example.com")
+    (repo / "README.md").write_text("# Project\n\nRAG documentation.\n", encoding="utf-8")
+    git("add", ".")
+    git("commit", "-m", "initial")
+    git("switch", "-c", "demo/bug")
+    (repo / "analytics.py").write_text(
+        "def average(values: list[float]) -> float:\n    return sum(values) / len(values)\n",
+        encoding="utf-8",
+    )
+    git("add", ".")
+    git("commit", "-m", "bug")
+    git("switch", "main")
+
+    index = Index(repo, index_path=settings.data_dir / "gitreview.sqlite", settings=settings)
+    index.build()
+    llm = FakeLLM(REVIEW_RESPONSE)
+    markdown = review(repo, base="main", head="demo/bug", llm=llm, index=index)
+    assert "## Потенциальные баги" in markdown
+    assert "def average" in llm.last_prompt

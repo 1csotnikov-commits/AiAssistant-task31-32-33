@@ -7,8 +7,8 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from ai_assistant.config import get_settings
-from ai_assistant.git_tools import changed_files, diff_file_paths, git_diff, read_diff_file
-from ai_assistant.index import Index, ensure_index
+from ai_assistant.git_tools import GitError, changed_files, diff_file_paths, git_diff, git_show, read_diff_file
+from ai_assistant.index import Index, chunk_python, ensure_index
 from ai_assistant.llm import LLM, get_llm
 from ai_assistant.models import Chunk
 from ai_assistant.rag import build_context, source_list
@@ -64,17 +64,37 @@ def collect_context(
     diff_text: str,
     files: Sequence[str],
     top_k: int = 5,
+    repo: Path | None = None,
+    head: str = "HEAD",
 ) -> tuple[list[Chunk], list[Chunk]]:
-    """top-K документации и top-K кода из изменённых файлов."""
+    """top-K документации и top-K кода из изменённых файлов.
+
+    Если изменённый Python-файл есть только в PR-ветке и отсутствует в индексе,
+    он читается через `git show <head>:<path>` и чанкуется на лету.
+    """
     query = retrieval_query(diff_text, files)
     docs = list(index.search(query, k=top_k, kind="doc"))
     code_paths = [name for name in files if name.endswith(".py") and not name.startswith("tests/")]
     code: list[Chunk] = []
     if code_paths:
         code = list(index.search(query, k=top_k, kind="code", paths=code_paths))
+    if len(code) < top_k and repo is not None:
+        found = {item.path for item in code}
+        for path in code_paths:
+            if path in found:
+                continue
+            try:
+                text = git_show(repo, head, path)
+            except GitError:
+                continue
+            extra = chunk_python(Path(path), text, repo)
+            code.extend(extra[: max(1, top_k - len(code))])
+            found.add(path)
+            if len(code) >= top_k:
+                break
     if not code:
         code = list(index.search(query, k=top_k, kind="code"))
-    return docs, code
+    return docs, code[:top_k]
 
 
 def build_review_prompt(diff_text: str, files: Sequence[str], docs: Sequence[Chunk], code: Sequence[Chunk]) -> str:
@@ -138,7 +158,14 @@ def review(
         return empty
     if index is None:
         index, _ = ensure_index(repo)
-    docs, code = collect_context(index, diff_text, files, top_k=top_k)
+    docs, code = collect_context(
+        index,
+        diff_text,
+        files,
+        top_k=top_k,
+        repo=repo if diff_file is None else None,
+        head=head,
+    )
     prompt = build_review_prompt(diff_text, files, docs, code)
     response = (llm or get_llm()).chat(
         [
